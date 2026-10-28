@@ -57,43 +57,7 @@ A lightweight, locally hosted web application for merging, compressing, extracti
 
 The application follows a modular, locally hosted architecture. Users interact with a browser-based interface, while Flask handles requests and coordinates document-processing libraries.
 
-```mermaid
-flowchart TB
-    U["User"] -->|"Upload / Configure / Download"| UI["Browser UI<br/>HTML · CSS · JavaScript"]
 
-    UI <-->|"HTTP · Port 5000"| APP["Flask Application<br/>app.py"]
-
-    APP --> ROUTES["Routes & Request Handling"]
-    ROUTES --> VALIDATE["File Validation<br/>& Processing Logic"]
-    VALIDATE --> ENGINE{"Processing Engine"}
-
-    ENGINE -->|"PDF operations"| MUPDF["PyMuPDF"]
-    ENGINE -->|"PDF merging"| PYPDF["pypdf"]
-    ENGINE -->|"PDF to Word"| DOCX["pdf2docx"]
-    ENGINE -->|"HTML to PDF"| PW["Playwright / Chromium"]
-    ENGINE -->|"Word to PDF"| LO["LibreOffice"]
-
-    APP <--> WS[("Temporary Workspace<br/>workspace/")]
-
-    MUPDF --> OUT["Generated Output"]
-    PYPDF --> OUT
-    DOCX --> OUT
-    PW --> OUT
-    LO --> OUT
-
-    OUT --> WS
-    WS -->|"Download response"| UI
-
-    classDef frontend fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
-    classDef backend fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
-    classDef engine fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef storage fill:#fef3c7,stroke:#d97706,color:#78350f
-
-    class UI frontend
-    class APP,ROUTES,VALIDATE backend
-    class MUPDF,PYPDF,DOCX,PW,LO engine
-    class WS,OUT storage
-```
 
 ### 2. Document Processing Workflow
 
@@ -152,24 +116,6 @@ flowchart LR
 - **Temporary file handling:** Intermediate and generated files use a workspace where required.
 - **Local execution:** The application is intended to run on the user's machine rather than requiring a hosted document-processing service.
 ```
-
-## 2. Suggested placement in your README
-
-A clean README order would be:
-
-1. Project overview
-2. Features
-3. Technology stack
-4. **Architecture diagrams**
-5. Project structure
-6. Getting started
-7. How to use
-8. File handling and privacy
-9. Troubleshooting
-10. Contributing and license
-
-**One technical note:** the workflow diagram represents the intended processing lifecycle. Confirm the actual cleanup behavior for every endpoint before documenting that all temporary files are deleted automatically. GitHub supports Mermaid diagrams inside Markdown code fences, so these diagrams can live directly in your README without extra dependencies.
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -365,10 +311,6 @@ Contributions and suggestions are welcome.
    ```
 
 5. Push the branch and open a pull request.
-
-## 📄 License
-
-No license information has been verified for this repository. Add a `LICENSE` file and update this section if you intend to distribute the project under an open-source license.
 
 ## 👨‍💻 Author
 

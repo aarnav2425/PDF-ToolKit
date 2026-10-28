@@ -6,27 +6,15 @@ A lightweight, locally hosted web application for merging, compressing, extracti
 
 ## ✨ Features
 
-### 📄 PDF Tools
-
-- **Merge PDFs** — Combine multiple PDF documents into one file. Reorder files manually or sort them naturally by filename.
-- **Compress PDF** — Reduce PDF file size using raster compression or lossless optimization.
-  - Raster mode allows you to configure DPI and JPEG quality, but converts pages into images and removes selectable text.
-  - Lossless mode optimizes the PDF while preserving text and vector content.
-- **Extract PDF Pages** — Extract selected pages or page ranges into a new PDF, with support for specifying the desired page order.
-- **PDF to Word** — Convert PDF documents into editable Microsoft Word (`.docx`) files.
-
-### 🔄 Document Conversion
-
-- **HTML to PDF** — Render HTML documents as A4 PDFs using Chromium through Playwright.
-- **Word to PDF** — Convert Word and other supported document formats into PDF using LibreOffice.
-
-### 🌐 HTML Tools
-
-- **Merge HTML Documents** — Combine multiple `.html` or `.htm` files into a single HTML document.
-- **ZIP Archive Support** — Process HTML documents contained in ZIP archives.
-- **Flexible Ordering** — Use manual, natural filename, or date-based ordering where supported.
-- **Output Options** — Generate a structured HTML document or concatenate the original HTML content.
-
+| Feature | Description |
+|---|---|
+| **PDF Merger** | Combine multiple PDF documents into a single file with customizable page order. |
+| **HTML Merger** | Merge HTML files from individual uploads or ZIP archives, with natural, date-based, and manual sorting options. |
+| **HTML to PDF Converter** | Convert HTML files and ZIP archives containing HTML documents and supporting assets into PDFs. |
+| **PDF Compressor** | Reduce PDF file sizes using raster-based compression or lossless optimization. |
+| **PDF Page Extractor** | Extract specific pages or page ranges into a separate PDF document. |
+| **PDF to Word Converter** | Convert PDF documents into editable Microsoft Word (DOCX) files. |
+| **Word to PDF Converter** | Convert Word and supported OpenDocument files into PDFs using LibreOffice.</text>
 ### 🖥️ User Interface
 
 - Browser-based interface built with Flask and HTML, CSS, and JavaScript.

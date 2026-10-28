@@ -57,6 +57,7 @@ A lightweight, locally hosted web application for merging, compressing, extracti
 
 The application follows a modular, locally hosted architecture. Users interact with a browser-based interface, while Flask handles requests and coordinates document-processing libraries.
 
+<img width="1312" height="1199" alt="PDF-Toolkit Architecture Overview" src="https://github.com/user-attachments/assets/43332212-5ebd-45d4-8f0c-94d976e2399c" />
 
 
 ### 2. Document Processing Workflow

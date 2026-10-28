@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personal Tools</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#6b7280;--ac:#4f46e5;--bd:#e3e6ea}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--card:#1d2026;--tx:#e8eaed;--mu:#9aa0a8;--ac:#818cf8;--bd:#2f343c}}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+main{max-width:760px;margin:0 auto;padding:24px 16px}h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mu);margin:0 0 18px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 12px;border-radius:8px;cursor:pointer}
+nav button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px}
+.drop{border:2px dashed var(--bd);border-radius:10px;padding:26px;text-align:center;color:var(--mu);cursor:pointer}
+.drop.over{border-color:var(--ac);color:var(--ac)}
+ul{list-style:none;padding:0;margin:12px 0}li{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px;margin-bottom:6px}
+li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}li small{color:var(--mu)}
+li button{border:0;background:none;color:var(--mu);cursor:pointer;font-size:16px}
+.opts{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mu)}
+select,input[type=text],input[type=number]{padding:7px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+.run{background:var(--ac);color:#fff;border:0;padding:10px 18px;border-radius:8px;cursor:pointer;font-size:15px}.run:disabled{opacity:.5}
+#out{margin-top:14px;padding:12px;border-radius:8px;background:var(--bg);display:none}#out.err{color:#dc2626}
+a.dl{color:var(--ac);font-weight:600}
+</style></head><body><main>
+<h1>🛠️ Personal Tools</h1><p class="sub">Merge, convert, compress and split files. Everything runs on your own machine.</p>
+<nav id="nav"></nav>
+<div class="card">
+  <p id="desc" class="sub" style="margin-top:0"></p>
+  <div class="drop" id="drop">Drop files here or click to browse<input type="file" id="pick" hidden></div>
+  <ul id="list"></ul>
+  <div class="opts" id="opts"></div>
+  <button class="run" id="run">Run</button>
+  <div id="out"></div>
+</div><p class="sub" id="disk" style="margin-top:12px;font-size:13px"></p></main>
+<script>
+const sortOpt=(vals)=>({k:'sort',l:'Order',t:'select',o:vals});
+const TOOLS={
+ 'merge-pdf':{n:'Merge PDFs',d:'Combine PDFs into one. Drag-free reordering with ▲▼, or sort naturally (1, 2, 10).',acc:'.pdf',multi:1,
+   opts:[sortOpt([['manual','Manual (as listed)'],['natural','Natural filename']])]},
+ 'merge-html':{n:'Merge HTML',d:'Merge .html/.htm files and/or ZIP archives containing them into a single page.',acc:'.html,.htm,.zip',multi:1,
+   opts:[sortOpt([['natural','Natural filename'],['date','Date in name (_YYYYMMDD)'],['manual','Manual']]),
+         {k:'structure',l:'Output',t:'select',o:[['valid','One valid HTML document'],['raw','Raw concatenation']]}]},
+ 'html-to-pdf':{n:'HTML → PDF',d:'Render an HTML file (or a ZIP with its assets) as an A4 PDF. Several files are merged first.',acc:'.html,.htm,.zip',multi:1,
+   opts:[sortOpt([['natural','Natural filename'],['date','Date in name'],['manual','Manual']])]},
+ 'compress-pdf':{n:'Compress PDF',d:'Raster mode re-renders pages as JPEG (smallest, loses selectable text). Lossless keeps text.',acc:'.pdf',multi:0,
+   opts:[{k:'mode',l:'Mode',t:'select',o:[['raster','Raster (small)'],['lossless','Lossless optimize']]},
+         {k:'dpi',l:'DPI',t:'number',v:150},{k:'quality',l:'JPEG quality (1-95)',t:'number',v:70}]},
+ 'pdf-to-word':{n:'PDF → Word',d:'Convert a PDF to an editable .docx. Works best on text PDFs; scanned pages stay as images.',acc:'.pdf',multi:0,opts:[]},
+ 'word-to-pdf':{n:'Word → PDF',d:'Convert .docx, .doc, .odt or .rtf to PDF (uses LibreOffice on the server).',acc:'.doc,.docx,.odt,.rtf',multi:0,opts:[]},
+ 'split-pdf':{n:'Extract pages',d:'Keep only chosen pages, in the order given.',acc:'.pdf',multi:0,
+   opts:[{k:'pages',l:'Pages (e.g. 1-3,5,8-10)',t:'text',v:''}]}
+};
+let cur,files=[],url;const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const fmt=b=>b>1e6?(b/1e6).toFixed(2)+' MB':(b/1e3).toFixed(1)+' KB';
+$('nav').innerHTML=Object.entries(TOOLS).map(([k,t])=>`<button data-k="${k}">${t.n}</button>`).join('');
+$('nav').onclick=e=>e.target.dataset.k&&select(e.target.dataset.k);
+function select(k){cur=k;files=[];const t=TOOLS[k];
+ [...$('nav').children].forEach(b=>b.classList.toggle('on',b.dataset.k==k));
+ $('desc').textContent=t.d;$('pick').accept=t.acc;$('pick').multiple=!!t.multi;
+ $('opts').innerHTML=t.opts.map(o=>`<label>${o.l}`+(o.t=='select'?`<select data-k="${o.k}">${o.o.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select>`:`<input type="${o.t}" data-k="${o.k}" value="${o.v}">`)+'</label>').join('');
+ $('out').style.display='none';render()}
+function render(){$('list').innerHTML=files.map((f,i)=>`<li><span>${esc(f.name)}</span><small>${fmt(f.size)}</small>`+
+ (TOOLS[cur].multi?`<button data-a="up" data-i="${i}">▲</button><button data-a="dn" data-i="${i}">▼</button>`:'')+`<button data-a="rm" data-i="${i}">✕</button></li>`).join('');
+ $('run').disabled=!files.length}
+$('list').onclick=e=>{const a=e.target.dataset.a,i=+e.target.dataset.i;if(!a)return;
+ if(a=='rm')files.splice(i,1);
+ else{const j=a=='up'?i-1:i+1;if(j>=0&&j<files.length)[files[i],files[j]]=[files[j],files[i]]}render()};
+function add(fl){const t=TOOLS[cur];const ok=[...fl].filter(f=>t.acc.split(',').some(x=>f.name.toLowerCase().endsWith(x)));
+ files=t.multi?files.concat(ok):ok.slice(0,1);render()}
+$('drop').onclick=()=>$('pick').click();$('pick').onchange=e=>{add(e.target.files);e.target.value=''};
+$('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('over')};
+$('drop').ondragleave=()=>$('drop').classList.remove('over');
+$('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('over');add(e.dataTransfer.files)};
+$('run').onclick=async()=>{const t=TOOLS[cur],fd=new FormData(),out=$('out');
+ files.forEach(f=>fd.append(t.multi?'files':'file',f));
+ $('opts').querySelectorAll('[data-k]').forEach(el=>fd.append(el.dataset.k,el.value));
+ $('run').disabled=true;$('run').textContent='Working…';out.className='';out.style.display='block';out.textContent='Processing…';
+ try{const r=await fetch('/api/'+cur,{method:'POST',body:fd});
+  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||r.statusText)}
+  const b=await r.blob();if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(b);
+  const name=(r.headers.get('Content-Disposition')||'').match(/filename="?([^";]+)/)?.[1]||'result';
+  const o=r.headers.get('X-Original-Size'),n=+r.headers.get('X-Result-Size');
+  out.innerHTML=`✅ Done — ${fmt(n)}`+(o?` (was ${fmt(+o)}, ${Math.round(100-n/o*100)}% smaller)`:'')+`<br><a class="dl" href="${url}" download="${esc(name)}">Download ${esc(name)}</a>`;
+ }catch(e){out.className='err';out.textContent='⚠️ '+e.message}
+ $('run').textContent='Run';$('run').disabled=false};
+async function disk(){try{const j=await(await fetch('/api/disk-usage')).json();$('disk').textContent='Workspace: '+j.path+' — '+fmt(j.bytes)+' in use'}catch(e){}}
+disk();setInterval(disk,2000);
+select('merge-pdf');
+</script></body></html>

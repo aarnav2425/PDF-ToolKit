@@ -1,12 +1,15 @@
-import subprocess, io, re, os, zipfile, tempfile, shutil, threading, http.server, functools, logging
+import subprocess, io, re, os, zipfile, tempfile, shutil, threading, http.server, functools, logging, hmac, signal, sys
 from urllib.parse import urlparse, quote
-from flask import Flask, request, send_file, jsonify, render_template, abort
+from flask import Flask, request, send_file, jsonify, render_template, abort, Response
 import pymupdf as fitz  # PyMuPDF
-from pypdf import PdfWriter
+from pypdf import PdfWriter, PdfReader
 
 # All temporary files live in ./workspace inside the project, so disk use is visible here.
 WORKSPACE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workspace")
 os.makedirs(WORKSPACE, exist_ok=True)
+if os.path.islink(WORKSPACE):  # the start-up wipe below must never follow a symlink elsewhere
+    raise SystemExit("workspace must be a real folder, not a symlink")
+os.chmod(WORKSPACE, 0o700)  # other users on this computer can't browse it
 for _n in os.listdir(WORKSPACE):  # clear leftovers from a previous crash
     _p = os.path.join(WORKSPACE, _n)
     shutil.rmtree(_p, ignore_errors=True) if os.path.isdir(_p) else os.remove(_p)
@@ -34,13 +37,108 @@ log = logging.getLogger(__name__)
 SLOTS = threading.BoundedSemaphore(2)  # max concurrent Chromium renders
 
 
+BASE = os.path.dirname(os.path.abspath(__file__))
+MAX_PAGES = 2000
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")  # set it to require a login (use when sharing)
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+EXTRA_HOSTS = [h.strip().lower() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+SECRET_WORDS = ("PASSWORD", "SECRET", "TOKEN", "KEY", "CREDENTIAL")
+
+
 @app.before_request
-def block_cross_origin_posts():
-    # Stops other websites from silently triggering uploads/renders on your machine (CSRF)
-    if request.method == "POST":
+def guard():
+    if APP_PASSWORD:  # shared mode: login required for everything
+        a = request.authorization
+        if not (a and hmac.compare_digest((a.password or "").encode(), APP_PASSWORD.encode())):
+            return Response("Login required", 401, {"WWW-Authenticate": 'Basic realm="Personal Tools"'})
+    else:  # local mode: only answer to our own host names (blocks DNS-rebinding from other sites)
+        host = (urlparse("//" + request.host).hostname or "").lower()
+        if host not in LOCAL_HOSTS and not any(host == h or (h.startswith(".") and host.endswith(h)) for h in EXTRA_HOSTS):
+            abort(400)
+    if request.method == "POST":  # stop other websites from triggering uploads (CSRF)
+        if request.headers.get("Sec-Fetch-Site") == "cross-site":
+            abort(403)
         o = request.headers.get("Origin")
         if o and urlparse(o).netloc != request.host:
             abort(403)
+
+
+@app.after_request
+def security_headers(r):
+    r.headers.setdefault("X-Content-Type-Options", "nosniff")
+    r.headers.setdefault("X-Frame-Options", "DENY")
+    r.headers.setdefault("Referrer-Policy", "no-referrer")
+    r.headers.setdefault("Cache-Control", "no-store")
+    r.headers.setdefault("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                         "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+                         "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+    return r
+
+
+@app.errorhandler(413)
+def too_big(_):
+    return err("File too large (limit 200 MB).", 413)
+
+
+def limited(fn):  # at most 2 heavy jobs at once, so a few requests can't exhaust memory/CPU
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        if not SLOTS.acquire(timeout=10):
+            return err("Server busy, try again shortly.", 429)
+        try:
+            return fn(*a, **k)
+        finally:
+            SLOTS.release()
+    return wrapper
+
+
+def clean_env():  # don't hand secrets (e.g. APP_PASSWORD) to converter programs
+    return {k: v for k, v in os.environ.items() if not any(w in k.upper() for w in SECRET_WORDS)}
+
+
+def run_isolated(cmd, timeout, env=None):
+    """Run cmd in its own process group and return (exit code, stderr). On timeout the whole group is
+    killed: LibreOffice starts child processes that would otherwise keep running."""
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, start_new_session=True)
+    try:
+        _, e = p.communicate(timeout=timeout)
+    except BaseException:
+        try:
+            os.killpg(p.pid, signal.SIGKILL) if hasattr(os, "killpg") else p.kill()
+        except (ProcessLookupError, PermissionError):
+            pass
+        p.wait()
+        raise
+    return p.returncode, e.decode("utf-8", "ignore")
+
+
+def office_risk(ext, data):
+    """Heuristic pre-scan: refuse documents that pull in outside files/URLs or carry macros."""
+    bad = "This document links to outside files or contains macros, which isn't allowed."
+    if ext in (".docx", ".odt"):
+        with safe_zip(data) as z:
+            for n in z.namelist():
+                low = n.lower()
+                if low.startswith(("basic/", "scripts/", "macros/")) or "vbaproject" in low:
+                    return bad
+                if low.endswith(".rels"):
+                    for tag in re.findall(r"<Relationship\b[^>]*>", z.read(n).decode("utf-8", "ignore")):
+                        if 'TargetMode="External"' in tag and "/hyperlink" not in tag:
+                            return bad
+                elif low.startswith("word/") and low.endswith(".xml"):
+                    x = z.read(n).lower()
+                    if any(m in x for m in (b"includetext", b"includepicture", b"ddeauto", b"w:altchunk", b"w:subdoc")):
+                        return bad
+                elif low in ("content.xml", "styles.xml"):
+                    x = z.read(n).decode("utf-8", "ignore")
+                    if "text:section-source" in x or "office:script" in x or re.search(
+                            r'<draw:(?:image|object)[^>]*xlink:href="(?!Pictures/|\./Object|Object|#)[^"]', x):
+                        return bad
+        return None
+    low = data.lower()
+    marks = [b"includetext", b"includepicture", b"ddeauto", b"\\objautlink", b"\\objlink"]
+    marks += [m.decode().encode("utf-16le") for m in marks[:3]]
+    return bad if any(m in low for m in marks) else None
 
 
 def safe_zip(data):
@@ -88,7 +186,7 @@ def dir_size(path):
 
 @app.get("/api/disk-usage")
 def disk_usage():
-    return jsonify(bytes=dir_size(WORKSPACE), path=WORKSPACE)
+    return jsonify(bytes=dir_size(WORKSPACE))
 
 
 @app.route("/")
@@ -97,14 +195,20 @@ def index():
 
 
 @app.post("/api/merge-pdf")
+@limited
 def merge_pdf():
     files = sort_files(request.files.getlist("files"), request.form.get("sort", "manual"))
     if len(files) < 2:
         return err("Upload at least 2 PDF files.")
     w = PdfWriter()
     try:
+        pages = 0
         for f in files:
-            w.append(io.BytesIO(f.read()))
+            data = f.read()
+            pages += len(PdfReader(io.BytesIO(data)).pages)
+            if pages > MAX_PAGES:
+                return err(f"Too many pages (limit {MAX_PAGES}).")
+            w.append(io.BytesIO(data))
     except Exception as e:
         return err("Could not read one of the PDFs (corrupt or encrypted?).")
     out = io.BytesIO()
@@ -240,6 +344,7 @@ def html_to_pdf():
 
 
 @app.post("/api/compress-pdf")
+@limited
 def compress_pdf():
     f = request.files.get("file")
     if not f:
@@ -253,6 +358,8 @@ def compress_pdf():
         return err("DPI and quality must be numbers.")
     try:
         doc = fitz.open(stream=raw, filetype="pdf")
+        if len(doc) > MAX_PAGES:
+            return err(f"Too many pages (limit {MAX_PAGES}).")
         if mode == "raster":  # same technique as compress.py, with tunable DPI/quality
             new = fitz.open()
             for page in doc:
@@ -270,6 +377,7 @@ def compress_pdf():
 
 
 @app.post("/api/split-pdf")
+@limited
 def split_pdf():
     f = request.files.get("file")
     spec = request.form.get("pages", "").strip()
@@ -277,6 +385,8 @@ def split_pdf():
         return err("Upload a PDF and enter pages, e.g. 1-3,5,8-10.")
     try:
         doc = fitz.open(stream=f.read(), filetype="pdf")
+        if len(doc) > MAX_PAGES:
+            return err(f"Too many pages (limit {MAX_PAGES}).")
         order = []
         for part in spec.split(",")[:200]:
             a, _, b = part.strip().partition("-")
@@ -288,19 +398,6 @@ def split_pdf():
         return reply(doc.tobytes(garbage=3, deflate=True), "extracted.pdf", "application/pdf")
     except Exception as e:
         return err("Invalid page list or PDF.")
-
-
-def patch_pymupdf_for_pdf2docx():
-    """Older pdf2docx releases call Rect.get_area(), which some PyMuPDF releases no longer have.
-    Add it back (same maths) so the two libraries work together whatever versions are installed."""
-    for modname in ("pymupdf", "fitz"):  # pdf2docx imports `fitz`; cover both names
-        try:
-            mod = __import__(modname)
-        except ImportError:
-            continue
-        for cls in (getattr(mod, "Rect", None), getattr(mod, "IRect", None)):
-            if cls is not None and not hasattr(cls, "get_area"):
-                cls.get_area = lambda self, unit="px": abs(self.width * self.height)
 
 
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -315,19 +412,21 @@ def pdf_to_word():
         return err("Server busy, try again shortly.", 429)
     tmp = tempfile.mkdtemp(dir=WORKSPACE)
     try:
-        patch_pymupdf_for_pdf2docx()
-        from pdf2docx import Converter
         src, dst = os.path.join(tmp, "input.pdf"), os.path.join(tmp, "output.docx")
         f.save(src)
-        cv = Converter(src)
-        try:
-            cv.convert(dst)
-        finally:
-            cv.close()
+        rc, errtxt = run_isolated([sys.executable, os.path.join(BASE, "pdf_worker.py"), src, dst, str(MAX_PAGES)],
+                                  180, clean_env())
+        if rc == 3:
+            return err("pdf2docx is not installed. In the project folder run: python3 -m pip install -r requirements.txt", 501)
+        if rc == 4:
+            return err(f"Too many pages (limit {MAX_PAGES}).")
+        if rc != 0 or not os.path.exists(dst):
+            log.error("pdf-to-word worker failed (exit %s): %s", rc, errtxt[-1500:])
+            return err("Could not convert this PDF (corrupt, encrypted or scanned?).", 500)
         with open(dst, "rb") as fh:
             return reply(fh.read(), "converted.docx", DOCX)
-    except ImportError:
-        return err("pdf2docx is not installed. In the project folder run: python3 -m pip install -r requirements.txt", 501)
+    except subprocess.TimeoutExpired:
+        return err("Conversion timed out.", 504)
     except Exception:
         log.exception("pdf-to-word failed")
         return err("Could not convert this PDF (corrupt, encrypted or scanned?).", 500)
@@ -349,16 +448,25 @@ def word_to_pdf():
     magic = {".docx": b"PK", ".odt": b"PK", ".doc": b"\xd0\xcf\x11\xe0", ".rtf": b"{\\rtf"}[ext]
     if not head.startswith(magic):
         return err(f"This doesn't look like a real {ext} file.")
+    data = f.read(); f.seek(0)
+    try:
+        reason = office_risk(ext, data)
+    except (ValueError, zipfile.BadZipFile) as e:
+        return err(str(e) if isinstance(e, ValueError) else "Invalid document file.")
+    if reason:
+        return err(reason)
     if not SLOTS.acquire(timeout=10):
         return err("Server busy, try again shortly.", 429)
     tmp = tempfile.mkdtemp(dir=WORKSPACE)
     try:
         src = os.path.join(tmp, "input" + ext)
         f.save(src)
-        subprocess.run([office, "--headless", "--norestore", "--nolockcheck",
-                        f"-env:UserInstallation=file://{os.path.join(tmp, 'profile')}",
-                        "--convert-to", "pdf", "--outdir", tmp, src],
-                       capture_output=True, timeout=120, check=True, env={**os.environ, "HOME": tmp})
+        rc, _ = run_isolated([office, "--headless", "--norestore", "--nolockcheck",
+                              f"-env:UserInstallation=file://{os.path.join(tmp, 'profile')}",
+                              "--convert-to", "pdf", "--outdir", tmp, src],
+                             120, {**clean_env(), "HOME": tmp})
+        if rc != 0:
+            return err("Could not convert this document.", 500)
         out = os.path.join(tmp, "input.pdf")
         if not os.path.exists(out):
             return err("Could not convert this document.", 500)

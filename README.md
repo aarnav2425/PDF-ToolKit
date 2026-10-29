@@ -6,6 +6,9 @@ It grew out of a handful of small command-line scripts (merge, compress, share, 
 
 ---
 
+![Uploading Screenshot 2026-10-29 at 12.23.43 PM.png…]()
+
+
 ## Contents
 
 - [Features](#features)

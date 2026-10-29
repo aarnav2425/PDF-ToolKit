@@ -6,9 +6,9 @@ It grew out of a handful of small command-line scripts (merge, compress, share, 
 
 ---
 
-![Uploading Screenshot 2026-10-29 at 12.23.43 PM.png…]()
+<img width="1137" height="727" alt="Untitled" src="https://github.com/user-attachments/assets/819cd36f-dd36-4332-9292-85b70fd05ea8" />
 
-
+---
 ## Contents
 
 - [Features](#features)

@@ -1,133 +1,60 @@
-# PDF ToolKit — Personal File Utilities
+# Personal Tools
 
-A lightweight, locally hosted web application for merging, compressing, extracting, and converting PDF files, along with merging HTML documents. Built with Python and Flask, it brings everyday document-processing scripts into a simple browser-based interface.
+A self-hosted web app for everyday document jobs: merge PDFs, merge HTML, convert HTML, Word and PDF files in both directions, compress PDFs, and pull out pages. Everything runs on your own computer. Files are processed in memory or in short-lived temporary folders and deleted after each job.
 
-**Process your files locally, configure your operations, and download the results directly from the interface.**
+It grew out of a handful of small command-line scripts (merge, compress, share, output) and now wraps them in a browser interface with proper input checks, limits and sandboxing.
 
-## ✨ Features
+---
 
-### 📄 PDF Tools
+## Contents
 
-- **Merge PDFs** — Combine multiple PDF documents into one file. Reorder files manually or sort them naturally by filename.
-- **Compress PDF** — Reduce PDF file size using raster compression or lossless optimization.
-  - Raster mode allows you to configure DPI and JPEG quality, but converts pages into images and removes selectable text.
-  - Lossless mode optimizes the PDF while preserving text and vector content.
-- **Extract PDF Pages** — Extract selected pages or page ranges into a new PDF, with support for specifying the desired page order.
-- **PDF to Word** — Convert PDF documents into editable Microsoft Word (`.docx`) files.
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Using the tools](#using-the-tools)
+- [Configuration](#configuration)
+- [Sharing with friends](#sharing-with-friends)
+- [Security model](#security-model)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [API reference](#api-reference)
+- [Limits](#limits)
+- [Troubleshooting](#troubleshooting)
+- [Deployment notes](#deployment-notes)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
 
-### 🔄 Document Conversion
+---
 
-- **HTML to PDF** — Render HTML documents as A4 PDFs using Chromium through Playwright.
-- **Word to PDF** — Convert Word and other supported document formats into PDF using LibreOffice.
+## Features
 
-### 🌐 HTML Tools
+| Tool | What it does | Engine |
+|---|---|---|
+| **Merge PDFs** | Combine PDFs. Reorder by dragging, with arrows, or sort by filename (`1, 2, 10`). | pypdf |
+| **Merge HTML** | Join `.html` / `.htm` files and ZIPs of them into one page. Sort by name, by `_YYYYMMDD` date in the name, or manually. Output is one clean document or plain joined text. | built in |
+| **HTML to PDF** | Render a page, or a ZIP with its images and styles, to an A4 PDF. Several files are merged first. | Chromium via Playwright |
+| **PDF to Word** | Convert a PDF to an editable `.docx`. Works best on PDFs with real text. | pdf2docx |
+| **Word to PDF** | Convert `.docx`, `.doc`, `.odt` or `.rtf` to PDF. | LibreOffice |
+| **Compress PDF** | Two methods: *Small* redraws pages as JPEG with adjustable DPI and quality; *Lossless* keeps text and vectors. Shows how much smaller the result is. | PyMuPDF |
+| **Extract pages** | Keep only chosen pages in the order given, such as `1-3, 5, 8-10`. | PyMuPDF |
 
-- **Merge HTML Documents** — Combine multiple `.html` or `.htm` files into a single HTML document.
-- **ZIP Archive Support** — Process HTML documents contained in ZIP archives.
-- **Flexible Ordering** — Use manual, natural filename, or date-based ordering where supported.
-- **Output Options** — Generate a structured HTML document or concatenate the original HTML content.
+Also included:
 
-### 🖥️ User Interface
+- Light and dark themes, a keyboard-friendly layout, and a phone-friendly layout.
+- A live readout of the temporary workspace size in the page footer.
+- An optional login for when you share the app.
+- A hardened server: see [Security model](#security-model).
 
-- Browser-based interface built with Flask and HTML, CSS, and JavaScript.
-- Drag-and-drop file uploads.
-- File ordering and removal controls.
-- Configurable processing options.
-- Download links for generated files.
-- Live display of temporary workspace disk usage.
-- Light and dark appearance based on system preferences.
+---
 
-## 🛠️ Technology Stack
+## Quick start
 
-| Technology | Purpose |
-|---|---|
-| Python | Application logic and file processing |
-| Flask | Web server and API endpoints |
-| PyMuPDF | PDF compression and page extraction |
-| pypdf | PDF merging |
-| pdf2docx | PDF-to-Word conversion |
-| Playwright | Chromium-based HTML-to-PDF rendering |
-| LibreOffice | Word-to-PDF conversion |
-| HTML, CSS, JavaScript | Browser interface |
+**Requirements**
 
+- Python 3.9 or newer (3.10+ recommended, see [Troubleshooting](#troubleshooting))
+- LibreOffice, only for **Word to PDF**
+- About 400 MB of disk space for the Chromium download, only for **HTML to PDF**
 
-## 🏗️ Architecture
-
-### 1. System Architecture
-
-The application follows a modular, locally hosted architecture. Users interact with a browser-based interface, while Flask handles requests and coordinates document-processing libraries.
-
-
-
-### 2. Document Processing Workflow
-
-Each operation follows a common lifecycle: receive the uploaded files, validate the request, execute the selected operation, and return the generated document.
-
-```mermaid
-flowchart TD
-    A([Start]) --> B["Select a tool"]
-    B --> C["Upload document(s)"]
-    C --> D{"Input valid?"}
-
-    D -->|No| E["Return validation error"]
-    E --> C
-
-    D -->|Yes| F["Apply user options"]
-    F --> G["Select processing engine"]
-    G --> H["Process files"]
-
-    H --> I{"Processing successful?"}
-    I -->|No| J["Handle error and report status"]
-    J --> K([End with error])
-
-    I -->|Yes| L["Generate output file"]
-    L --> M["Prepare download response"]
-    M --> N["Download result"]
-    N --> O["Clean up temporary files<br/>where applicable"]
-    O --> P([Complete])
-```
-
-### 3. Processing Engine Selection
-
-```mermaid
-flowchart LR
-    A["User selects operation"] --> B{"Operation"}
-
-    B -->|Merge PDFs| C["pypdf"]
-    B -->|Compress PDF| D["PyMuPDF"]
-    B -->|Extract pages| D
-    B -->|PDF to Word| E["pdf2docx"]
-    B -->|HTML to PDF| F["Playwright + Chromium"]
-    B -->|Word to PDF| G["LibreOffice"]
-    B -->|Merge HTML| H["HTML processing logic"]
-
-    C --> I["Output document"]
-    D --> I
-    E --> I
-    F --> I
-    G --> I
-    H --> I
-```
-
-### Design Principles
-
-- **Separation of concerns:** The browser interface handles user interaction, while Flask coordinates file processing.
-- **Specialized processing engines:** Each document operation uses a library or external tool suited to that task.
-- **Temporary file handling:** Intermediate and generated files use a workspace where required.
-- **Local execution:** The application is intended to run on the user's machine rather than requiring a hosted document-processing service.
-```
-## 🚀 Getting Started
-
-### Prerequisites
-
-Install the following before running the application:
-
-- Python 3.10 or newer recommended.
-- pip, Python's package installer.
-- Chromium dependencies installed through Playwright for HTML-to-PDF conversion.
-- LibreOffice for Word-to-PDF conversion.
-
-### 1. Clone the repository
+Tested on macOS (Python 3.9) and Linux (Python 3.12). Windows has not been tested.
 
 ```bash
 git clone https://github.com/aarnav2425/Personal-Tools-.git

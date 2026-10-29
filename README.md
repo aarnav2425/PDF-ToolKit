@@ -6,15 +6,27 @@ A lightweight, locally hosted web application for merging, compressing, extracti
 
 ## ✨ Features
 
-| Feature | Description |
-|---|---|
-| **PDF Merger** | Combine multiple PDF documents into a single file with customizable page order. |
-| **HTML Merger** | Merge HTML files from individual uploads or ZIP archives, with natural, date-based, and manual sorting options. |
-| **HTML to PDF Converter** | Convert HTML files and ZIP archives containing HTML documents and supporting assets into PDFs. |
-| **PDF Compressor** | Reduce PDF file sizes using raster-based compression or lossless optimization. |
-| **PDF Page Extractor** | Extract specific pages or page ranges into a separate PDF document. |
-| **PDF to Word Converter** | Convert PDF documents into editable Microsoft Word (DOCX) files. |
-| **Word to PDF Converter** | Convert Word and supported OpenDocument files into PDFs using LibreOffice.</text>
+### 📄 PDF Tools
+
+- **Merge PDFs** — Combine multiple PDF documents into one file. Reorder files manually or sort them naturally by filename.
+- **Compress PDF** — Reduce PDF file size using raster compression or lossless optimization.
+  - Raster mode allows you to configure DPI and JPEG quality, but converts pages into images and removes selectable text.
+  - Lossless mode optimizes the PDF while preserving text and vector content.
+- **Extract PDF Pages** — Extract selected pages or page ranges into a new PDF, with support for specifying the desired page order.
+- **PDF to Word** — Convert PDF documents into editable Microsoft Word (`.docx`) files.
+
+### 🔄 Document Conversion
+
+- **HTML to PDF** — Render HTML documents as A4 PDFs using Chromium through Playwright.
+- **Word to PDF** — Convert Word and other supported document formats into PDF using LibreOffice.
+
+### 🌐 HTML Tools
+
+- **Merge HTML Documents** — Combine multiple `.html` or `.htm` files into a single HTML document.
+- **ZIP Archive Support** — Process HTML documents contained in ZIP archives.
+- **Flexible Ordering** — Use manual, natural filename, or date-based ordering where supported.
+- **Output Options** — Generate a structured HTML document or concatenate the original HTML content.
+
 ### 🖥️ User Interface
 
 - Browser-based interface built with Flask and HTML, CSS, and JavaScript.
@@ -45,7 +57,6 @@ A lightweight, locally hosted web application for merging, compressing, extracti
 
 The application follows a modular, locally hosted architecture. Users interact with a browser-based interface, while Flask handles requests and coordinates document-processing libraries.
 
-<img width="1312" height="1199" alt="PDF-Toolkit Architecture Overview" src="https://github.com/user-attachments/assets/43332212-5ebd-45d4-8f0c-94d976e2399c" />
 
 
 ### 2. Document Processing Workflow
@@ -119,195 +130,263 @@ Install the following before running the application:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/aarnav2425/PDF-ToolKit.git
-cd PDF-ToolKit
-```
+git clone https://github.com/aarnav2425/Personal-Tools-.git
+cd Personal-Tools-
 
-### 2. Create a virtual environment
-
-**macOS / Linux**
-
-```bash
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate                 # Windows: .venv\Scripts\activate
+
+python3 -m pip install -r requirements.txt
+python3 -m playwright install chromium    # for HTML to PDF
 ```
 
-**Windows**
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-### 3. Install dependencies
+Install LibreOffice for Word to PDF:
 
 ```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+brew install --cask libreoffice           # macOS
+sudo apt install libreoffice-writer       # Debian / Ubuntu
+# Windows: download the installer from libreoffice.org
 ```
 
-### 4. Install the Playwright browser
-
-Required for HTML-to-PDF conversion:
+Run it:
 
 ```bash
-python -m playwright install chromium
+python3 app.py
 ```
 
-### 5. Install LibreOffice
+Open <http://127.0.0.1:5000>. Stop the server with `CTRL+C`.
 
-Word-to-PDF conversion requires LibreOffice to be installed and discoverable by the application.
-
-- **macOS:** Install LibreOffice and ensure its executable is discoverable.
-- **Windows:** Install LibreOffice and ensure `soffice.exe` is available.
-- **Linux:** Install LibreOffice using your distribution's package manager.
-
-### 6. Start the application
-
-```bash
-python app.py
-```
-
-Open the following address in your browser:
-
-**http://localhost:5000**
-
-Keep the terminal running while you use the application.
-
-## 📖 How to Use
-
-1. Start the Flask application.
-2. Open `http://localhost:5000`.
-3. Select the required tool from the navigation menu.
-4. Upload your files by dragging them into the upload area or browsing your computer.
-5. Configure any available options, such as compression mode, page ranges, or file ordering.
-6. Run the operation and wait for processing to finish.
-7. Download the generated file.
-
-### Example: Merge PDFs
-
-1. Select **Merge PDFs**.
-2. Upload two or more PDF files.
-3. Choose manual or natural filename ordering.
-4. Run the operation.
-5. Download `merged.pdf`.
-
-### Example: Extract PDF Pages
-
-1. Select **Extract Pages**.
-2. Upload a PDF.
-3. Enter the required page ranges, for example:
-
-   ```text
-   1-3,5,8-10
-   ```
-
-4. Run the operation.
-5. Download `extracted.pdf`.
-
-Page numbers are one-based, meaning page 1 is the first page of the document.
-
-### Example: Compress a PDF
-
-1. Select **Compress PDF**.
-2. Upload a PDF document.
-3. Choose either raster or lossless optimization.
-4. Adjust DPI and JPEG quality when using raster mode.
-5. Run the operation and download the compressed file.
-
-**Important:** Raster compression can significantly reduce file size, but it sacrifices selectable text and vector information. Use lossless optimization when preserving document content is more important than achieving the smallest possible file.
-
-## 🔒 File Handling and Privacy
-
-The application is designed to run on your own machine.
-
-- PDF merging, compression, page extraction, and document conversion are performed by the local application.
-- HTML-to-PDF rendering uses a temporary workspace.
-- The application limits uploaded request sizes to 200 MB.
-- Temporary workspace files are cleaned up when the application starts and when HTML-to-PDF processing finishes.
-- The interface displays the current workspace disk usage.
-
-**Privacy note:** Local processing does not mean that every operation is entirely memory-only. HTML-to-PDF conversion uses temporary files on disk. Avoid exposing the local server to untrusted networks, and remember that temporary files may remain if a process crashes before cleanup.
-
-## 📁 Project Structure
-
-```text
-PDF-ToolKit/
-├── app.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-├── templates/
-│   └── index.html
-└── workspace/          # Created at runtime for temporary files
-```
-
-The `workspace/` directory is generated at runtime and is used for temporary processing files. It should not be used for permanent document storage.
-
-## 🧰 Troubleshooting
-
-### Playwright or Chromium errors
-
-Install the required browser:
-
-```bash
-python -m playwright install chromium
-```
-
-If Chromium fails to launch on Linux, install the operating-system libraries required by Playwright.
-
-### Word-to-PDF conversion fails
-
-Confirm that LibreOffice is installed and that the application can locate `soffice` or `libreoffice`.
-
-### PDF-to-Word conversion produces unexpected formatting
-
-PDF-to-Word conversion works best with text-based PDFs. Scanned documents and complex layouts may not convert into fully editable Word content.
-
-### Invalid or encrypted PDF
-
-Check that the PDF is readable and is not password-protected in a way that prevents processing.
-
-### Port 5000 is already in use
-
-Stop the process using the port or configure the Flask application's port before starting it again.
-
-## 🛡️ Usage Considerations
-
-- Keep original documents backed up before performing document conversions.
-- Verify the output of converted documents before relying on it.
-- Choose compression settings according to your quality and file-size requirements.
-- Do not expose the development server directly to the public internet.
-- Do not upload confidential documents to an instance hosted by someone else unless you trust that host.
-
-## 🤝 Contributing
-
-Contributions and suggestions are welcome.
-
-1. Fork the repository.
-2. Create a feature branch:
-
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-
-3. Implement and test your changes.
-4. Commit your changes:
-
-   ```bash
-   git add .
-   git commit -m "Add your feature"
-   ```
-
-5. Push the branch and open a pull request.
-
-## 👨‍💻 Author
-
-**Aarnav Gupta**
-
-- GitHub: [@aarnav2425](https://github.com/aarnav2425)
-- Repository: [PDF-ToolKit](https://github.com/aarnav2425/PDF-ToolKit)
+> The app listens on `127.0.0.1` only, so nothing else on your network can reach it unless you choose to share it.
 
 ---
 
-Built to make everyday document-processing tasks simpler through a single, locally hosted interface.
+## Using the tools
+
+1. Pick a tool in the left rail (a row of chips on phones).
+2. Drop files onto the sheet, or click it to choose files.
+3. Adjust options if the tool has any.
+4. Press the action button, then download the result.
+
+| Tool | Options |
+|---|---|
+| Merge PDFs | **Order of files:** as listed, or by filename |
+| Merge HTML | **Order:** by filename, by date in name, or as listed. **Result:** one clean HTML document, or plain joined text |
+| HTML to PDF | **Order** (only matters when several files are given) |
+| Compress PDF | **Method:** small or lossless. **Detail:** 36 to 300 DPI. **Image quality:** 1 to 95 |
+| Extract pages | **Pages to keep**, e.g. `1-3, 5, 8-10` |
+| PDF to Word, Word to PDF | none |
+
+**Notes on results**
+
+- *Compress, Small mode* turns every page into an image, so text can no longer be selected. If the result is not smaller than the original, the page says so and suggests the other method.
+- *HTML to PDF* runs with JavaScript off for safety. Pages that build their content with scripts will come out incomplete.
+- *PDF to Word* does no text recognition (OCR). Scanned pages stay as pictures.
+- *Merge HTML* keeps any `<script>` tags from the inputs. They will run when you open the merged file, so only merge pages you trust.
+
+---
+
+## Configuration
+
+Settings are environment variables, set when you start the app.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `APP_PASSWORD` | *(unset)* | When set, every page and API call requires a login. Any username works; the password must match. |
+| `ALLOWED_HOSTS` | *(unset)* | Extra host names the app answers to when **no** password is set. Comma separated. An entry starting with a dot, such as `.example.com`, matches all subdomains. |
+
+Examples:
+
+```bash
+APP_PASSWORD='a-long-passphrase' python3 app.py
+ALLOWED_HOSTS=.mytunnel.example python3 app.py
+```
+
+Constants you can change near the top of `app.py`:
+
+| Constant | Default | Meaning |
+|---|---|---|
+| `MAX_CONTENT_LENGTH` | 200 MB | Largest upload accepted |
+| `MAX_PAGES` | 2000 | Page limit for merge, compress, extract and PDF to Word |
+| `SLOTS` | 2 | Heavy jobs allowed at once |
+
+The port is the last line of `app.py` (`port=5000`). On macOS, port 5000 can be taken by AirPlay Receiver; change it to 5001 if you see "address already in use".
+
+---
+
+## Sharing with friends
+
+By default only your own computer can open the app. To let others use it, put a tunnel in front of it **and set a password**.
+
+```bash
+# terminal 1
+APP_PASSWORD='a-long-passphrase' python3 app.py
+
+# terminal 2: gives you a public https link
+brew install cloudflared
+cloudflared tunnel --url http://localhost:5000
+```
+
+Send friends the link and the password. Tips:
+
+- Use a long passphrase. There is no lockout after failed attempts.
+- Keep your computer awake while sharing (`caffeinate -i` on macOS).
+- Tailscale is a good alternative: friends join your private network and the app is never exposed to the open internet.
+- Anyone with the password can run conversions on your machine, so share only with people you trust.
+
+---
+
+## Security model
+
+The app opens files from the browser, and some of those files can be hostile. These protections are built in and covered by tests:
+
+| Risk | Protection |
+|---|---|
+| Reading local files through HTML to PDF (`file://` iframes and images) | Chromium renders with JavaScript off, and all requests are blocked except those to a throwaway local server that serves only the job's folder |
+| Requests from a rendered page to internal services | Same network lockdown |
+| ZIP bombs (in ZIP uploads and inside `.docx` / `.odt`) | Caps of 1,000 files and 200 MB unpacked |
+| Word documents that pull in outside files or carry macros | Pre-scan rejects external links, `INCLUDETEXT` / `INCLUDEPICTURE` fields, linked sections, DDE and macros. Ordinary web hyperlinks are allowed |
+| Slow or crashing converters | PDF to Word and Word to PDF run as separate processes with time limits (180 s and 120 s). Timeouts kill the whole process group so nothing lingers |
+| Memory and CPU exhaustion | Upload limit, page limit, pixel limit for rasterizing, and at most 2 heavy jobs at once |
+| Other websites using your local app (CSRF) | Cross-site and foreign-origin POSTs are refused |
+| DNS rebinding | Only `localhost` and `127.0.0.1` are accepted as host names unless you allow more |
+| Information leaks | The disk readout shows size only, never paths. Error messages are generic. Secret-looking environment variables are stripped before running converters |
+| Browser-side attacks | Content Security Policy, `X-Frame-Options`, `nosniff`, no caching, escaped filenames |
+| Other users on the same computer | The workspace folder is private (mode 700), and the app refuses to start if it is a symlink |
+
+**What is not covered**
+
+- The Word-document scan is a safety filter, not a guarantee. Keep LibreOffice updated.
+- The PDF and Office libraries parse untrusted files, and bugs in them appear from time to time. Keep dependencies current and run `pip-audit -r requirements.txt` regularly.
+- The built-in Flask server is for personal use. For anything public, use a production server and rate limiting.
+- The password uses HTTP Basic authentication. Use it only over HTTPS (a tunnel provides that) or on localhost.
+
+Please report security issues privately to the repository owner rather than in a public issue.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    B[Browser<br/>templates/index.html] -->|multipart POST| F[Flask app.py]
+    F --> G{Guard<br/>login, host,<br/>origin checks}
+    G --> M[PDF and HTML tools<br/>pypdf, PyMuPDF<br/>in-process]
+    G --> H[HTML to PDF<br/>local file server +<br/>Chromium, JS off]
+    G --> W[pdf_worker.py<br/>pdf2docx<br/>separate process]
+    G --> L[LibreOffice<br/>headless<br/>separate process group]
+    H & W & L --> T[(workspace/<br/>temporary jobs)]
+    M --> R[Result in memory]
+    H & W & L --> R
+    R --> B
+```
+
+- Light tools work entirely in memory and return the result in the same request.
+- Heavy tools use a throwaway folder inside `workspace/`, which is deleted when the job ends, whether it succeeds or fails. The whole folder is also emptied each time the app starts.
+- A semaphore keeps at most two heavy jobs running at once; extra requests wait up to 10 seconds, then get a "busy" message.
+
+---
+
+## Project structure
+
+```
+Personal-Tools-/
+├── app.py               Flask server: routes, security checks, limits, cleanup
+├── pdf_worker.py        Runs pdf2docx in its own process (timeout + isolation)
+├── requirements.txt     Python dependencies
+├── README.md            This file
+├── .gitignore           Ignores workspace/ and __pycache__/
+├── templates/
+│   └── index.html       The whole interface: markup, styles and script
+└── workspace/           Created at start-up; temporary job folders live here
+```
+
+Keep `pdf_worker.py` next to `app.py`, and keep the folder named `templates`.
+
+---
+
+## API reference
+
+Every tool is a plain `POST` that returns the result file, so you can script them without the browser. On errors the response is JSON: `{"error": "..."}`.
+
+| Endpoint | Form fields | Returns |
+|---|---|---|
+| `POST /api/merge-pdf` | `files` (2 or more), `sort` = `manual` \| `natural` | `merged.pdf` |
+| `POST /api/merge-html` | `files` (`.html`, `.htm`, `.zip`), `sort` = `natural` \| `date` \| `manual`, `structure` = `valid` \| `raw` | `merged_output.html` |
+| `POST /api/html-to-pdf` | `files`, `sort`, `merge_first` = `1` (optional) | `output.pdf` |
+| `POST /api/pdf-to-word` | `file` | `converted.docx` |
+| `POST /api/word-to-pdf` | `file` (`.docx`, `.doc`, `.odt`, `.rtf`) | `converted.pdf` |
+| `POST /api/compress-pdf` | `file`, `mode` = `raster` \| `lossless`, `dpi` (36 to 300), `quality` (1 to 95) | `compressed.pdf` |
+| `POST /api/split-pdf` | `file`, `pages` such as `1-3,5,8-10` | `extracted.pdf` |
+| `GET /api/disk-usage` | none | `{"bytes": 0}` |
+
+Examples:
+
+```bash
+curl -F files=@a.pdf -F files=@b.pdf -F sort=natural \
+     http://127.0.0.1:5000/api/merge-pdf -o merged.pdf
+
+curl -F file=@report.pdf -F mode=raster -F dpi=120 -F quality=60 \
+     http://127.0.0.1:5000/api/compress-pdf -o small.pdf
+
+# with a password set
+curl -u me:'a-long-passphrase' -F file=@notes.docx \
+     http://127.0.0.1:5000/api/word-to-pdf -o notes.pdf
+```
+
+Status codes: `400` bad input, `401` login needed, `403` blocked cross-site request, `413` upload too large, `429` server busy, `501` a required program is missing, `504` conversion timed out.
+
+---
+
+## Limits
+
+| Limit | Value |
+|---|---|
+| Upload size | 200 MB |
+| Pages per PDF job | 2,000 |
+| ZIP contents | 1,000 files, 200 MB unpacked |
+| Rasterized page size | about 120 million pixels at the chosen DPI |
+| Heavy jobs at once | 2 |
+| HTML to PDF page load | 30 s |
+| PDF to Word | 180 s |
+| Word to PDF | 120 s |
+
+Compressing a very long PDF in *Small* mode takes a while, because every page is redrawn.
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| PDF to Word says `pdf2docx is not installed` (501) | Install into the same Python you run the app with: `python3 -m pip install -r requirements.txt` |
+| PDF to Word fails with `'Rect' object has no attribute 'get_area'` | Old `pdf2docx` with a newer PyMuPDF. The app patches this automatically inside `pdf_worker.py`. If you see it, make sure you are running the latest `pdf_worker.py` |
+| Word to PDF says `LibreOffice not found` (501) | Install LibreOffice (see [Quick start](#quick-start)) and restart the app. On macOS the app also checks `/Applications/LibreOffice.app` |
+| Word to PDF says the document links to outside files | The safety scan rejected it. Open it in Word, remove linked files or fields and macros, save a copy, and try again |
+| HTML to PDF fails on a fresh install | Run `python3 -m playwright install chromium` |
+| HTML to PDF output is missing content | The page depends on JavaScript, which is disabled on purpose |
+| "Address already in use" on port 5000 | On macOS, turn off AirPlay Receiver in System Settings, or change the port in the last line of `app.py` |
+| Page shows 400 when opened through a tunnel | Set `APP_PASSWORD`, or add the tunnel name to `ALLOWED_HOSTS` |
+| 429 "Server busy" | Two heavy jobs are already running. Wait a few seconds and retry |
+| `pip` installs an older `pdf2docx` on Python 3.9 | Expected: newer releases need Python 3.10+. Upgrading Python (`brew install python@3.12`) removes the need for the compatibility patch |
+
+Server errors are logged in the terminal where you started the app.
+
+---
+
+## Deployment notes
+
+- **Your own computer plus a tunnel** is the simplest way to share: see [Sharing with friends](#sharing-with-friends).
+- **Small server:** run it in a container or directly on a VM with at least 2 GB of RAM, with Chromium and LibreOffice installed, behind a reverse proxy with HTTPS and `APP_PASSWORD` set. Use a production WSGI server such as Gunicorn instead of `python3 app.py`.
+- **Vercel and similar serverless hosts are a poor fit.** Request bodies are capped at a few megabytes, LibreOffice cannot be installed there, and Chromium is hard to fit in the function size limit.
+- **Free hosting tiers** usually have too little memory for Chromium and LibreOffice.
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening a pull request:
+
+1. Run the app and try the tool you changed in the browser.
+2. Run `bandit -r app.py pdf_worker.py` and `pip-audit -r requirements.txt`.
+3. If you add an endpoint, apply the same safeguards as the others: the `@limited` decorator for heavy work, size and page checks, and generic error messages.
+

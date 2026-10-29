@@ -309,17 +309,6 @@ Server errors are logged in the terminal where you started the app.
 
 ---
 
-## Roadmap
-
-- [ ] Dockerfile with Chromium and LibreOffice included
-- [ ] Gunicorn setup and basic rate limiting
-- [ ] Automated tests for each endpoint and each security check
-- [ ] OCR for scanned PDFs
-- [ ] More tools: rotate pages, watermark, PDF to images, images to PDF
-- [ ] Optional "strip scripts" setting for Merge HTML
-
----
-
 ## Contributing
 
 Issues and pull requests are welcome. Before opening a pull request:

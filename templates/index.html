@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e4e8ee">
 <title>Personal Tools</title>
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.theme='light'}</script>
 <style>
 :root{--desk:#e4e8ee;--paper:#fff;--ink:#0f1722;--mu:#5a6678;--line:#cfd6e0;--mk:#8a96a8;--ac:#1f4fe0;--on:#fff;--acs:#e8eefc;--ok:#0f7a4f;--er:#c2312d;--sh:0 1px 0 rgba(15,23,34,.04),0 18px 40px -22px rgba(15,23,34,.35);--serif:ui-serif,"New York",Georgia,"Times New Roman",serif;color-scheme:light}
 [data-theme=dark]{--desk:#0e131a;--paper:#18202b;--ink:#e9eef6;--mu:#93a1b5;--line:#2a3544;--mk:#52627a;--ac:#7d9bff;--on:#0e131a;--acs:#1b2744;--ok:#4cc38a;--er:#ff7a73;--sh:0 18px 40px -22px #000;color-scheme:dark}
-*{box-sizing:border-box}html{background:var(--desk)}
+*{box-sizing:border-box}[hidden]{display:none!important}html{background:var(--desk);-webkit-text-size-adjust:100%}
 body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--desk);min-height:100vh}
-button,input,select{font:inherit;color:inherit}button{cursor:pointer}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .shell{max-width:1040px;margin:0 auto;padding:26px 20px 40px;display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:34px}
 header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:22px}
@@ -19,7 +20,7 @@ header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-be
 nav{display:flex;flex-direction:column;gap:2px;align-self:start;position:sticky;top:20px}
 .grp{font-size:13px;color:var(--mu);margin:16px 12px 6px}.grp:first-child{margin-top:0}
 nav button{display:flex;align-items:center;gap:11px;width:100%;padding:9px 12px;border:0;border-radius:8px;background:none;text-align:left}
-nav button:hover{background:color-mix(in srgb,var(--paper) 70%,transparent)}
+@media(hover:hover){nav button:hover{background:color-mix(in srgb,var(--paper) 70%,transparent)}}
 nav button[aria-current=true]{background:var(--paper);color:var(--ac);font-weight:600;box-shadow:inset 3px 0 0 var(--ac),var(--sh)}
 main{min-width:0}
 .title{font:600 34px/1.1 var(--serif);letter-spacing:-.02em;margin:0 0 6px}.lede{margin:0 0 22px;color:var(--mu);max-width:60ch}
@@ -31,7 +32,7 @@ linear-gradient(var(--mk),var(--mk)) 0 100%/14px 1px,linear-gradient(var(--mk),v
 linear-gradient(var(--mk),var(--mk)) 100% 100%/14px 1px,linear-gradient(var(--mk),var(--mk)) 100% 100%/1px 14px;background-repeat:no-repeat}
 .sheet.over{--mk:var(--ac)}.sheet.over::before{inset:-3px}
 .drop{display:grid;justify-items:center;gap:6px;padding:40px 16px;border:1.5px dashed var(--mk);border-radius:6px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
-.drop:hover,.over .drop{background:var(--acs);border-color:var(--ac)}
+.over .drop{background:var(--acs);border-color:var(--ac)}@media(hover:hover){.drop:hover{background:var(--acs);border-color:var(--ac)}}
 .drop svg{color:var(--ac)}.drop b{font:600 19px var(--serif)}.drop span{color:var(--mu);font-size:14px}.drop u{color:var(--ac);text-underline-offset:3px}
 .lh{display:flex;justify-content:space-between;align-items:center;margin:18px 0 8px;font-size:14px;color:var(--mu)}
 .lh button{border:0;background:none;color:var(--ac);padding:2px 4px}
@@ -41,7 +42,7 @@ ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .no{font:600 14px var(--serif);color:var(--mu);text-align:right}
 .ext{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--acs);color:var(--ac)}
 .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sz{color:var(--mu);font-size:13px}
-.ib{display:flex;gap:2px}.ib button{border:0;background:none;color:var(--mu);width:28px;height:28px;border-radius:6px}.ib button:hover{background:var(--acs);color:var(--ac)}
+.ib{display:flex;gap:2px}.ib button{border:0;background:none;color:var(--mu);width:28px;height:28px;border-radius:6px}@media(hover:hover){.ib button:hover{background:var(--acs);color:var(--ac)}}
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
 label{display:grid;gap:6px;font-size:13.5px;color:var(--mu)}
 select,input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);appearance:none}
@@ -50,7 +51,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 input[type=range]{flex:1;accent-color:var(--ac)}
 .act{display:flex;align-items:center;gap:14px;margin-top:24px}
 .btn,.run{display:inline-flex;align-items:center;gap:9px;padding:11px 22px;border:0;border-radius:8px;background:var(--ac);color:var(--on);font-weight:600;text-decoration:none}
-.run:hover,.btn:hover{filter:brightness(1.08)}.run:disabled{opacity:.45;cursor:not-allowed;filter:none}
+@media(hover:hover){.run:hover,.btn:hover{filter:brightness(1.08)}}.run:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:r .7s linear infinite}
 .bar{flex:1;height:3px;border-radius:3px;background:var(--line);overflow:hidden;visibility:hidden}.bar.on{visibility:visible}
 .bar i{display:block;height:100%;width:35%;background:var(--ac);animation:s 1.1s ease-in-out infinite}
@@ -61,9 +62,30 @@ input[type=range]{flex:1;accent-color:var(--ac)}
 .save{font-weight:600;color:var(--ok)}@keyframes p{from{opacity:0;transform:translateY(4px)}}
 footer{grid-column:1/-1;margin-top:28px;font-size:13px;color:var(--mu);display:flex;align-items:center;gap:8px}
 footer i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
-@media(max-width:820px){.shell{grid-template-columns:1fr}nav{flex-direction:row;overflow-x:auto;position:static;padding-bottom:14px;margin:0 -4px}
-.grp{display:none}nav button{width:auto;white-space:nowrap;border:1px solid var(--line);background:var(--paper)}nav button[aria-current=true]{box-shadow:none;border-color:var(--ac)}
-.title{font-size:28px}.sheet{padding:18px;margin:10px}}
+@media(max-width:820px){
+.shell{grid-template-columns:1fr;padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) calc(30px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+header{padding-bottom:12px}.brand p{display:none}.mark{width:34px;height:34px}.brand h1{font-size:20px}
+nav{flex-direction:row;overflow-x:auto;position:static;gap:8px;margin:0 -14px 18px;padding:2px 14px 6px;scroll-snap-type:x proximity;scroll-padding:0 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+nav::-webkit-scrollbar{display:none}.grp{display:none}
+nav button{flex:none;width:auto;white-space:nowrap;min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:var(--paper);scroll-snap-align:start}
+nav button[aria-current=true]{box-shadow:none;border-color:var(--ac);background:var(--ac);color:var(--on)}
+.title{font-size:31px}.lede{font-size:14.5px;margin-bottom:18px}
+.sheet{padding:16px;margin:8px 4px}.sheet::before{inset:-7px}
+.drop{padding:34px 14px;border-radius:10px}.drop b{font-size:20px}
+.lh{margin-top:20px}.lh button{padding:12px 8px;margin:-12px -8px}
+.row,.row.multi{display:flex;flex-wrap:wrap;align-items:center;gap:0 10px;padding:6px 6px 8px 12px}
+.no{width:18px;flex:none;text-align:left}.ext{display:none}
+.nm{flex:1 1 0;min-width:0;font-weight:500}.ib{flex:none;margin-left:auto;gap:0}
+.sz{flex:1 0 100%;order:5;margin-top:-6px;padding-bottom:4px}.row.multi .sz{padding-left:28px}
+.opts{grid-template-columns:1fr;gap:18px}
+select,input[type=text]{font-size:16px;min-height:48px;border-radius:10px}select{background-position:right 16px center}
+input[type=range]{height:32px}
+.act{position:sticky;bottom:0;z-index:5;margin:24px -16px -16px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--paper) 86%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
+.run{flex:1;justify-content:center;min-height:52px;font-size:16.5px;border-radius:12px}
+.bar{position:absolute;left:0;right:0;top:-1px;height:3px;border-radius:0}
+.proof{margin-top:22px;padding:16px}.proof .btn{width:100%;justify-content:center;min-height:50px;border-radius:12px;font-size:16px}
+footer{margin-top:26px}}
+@media(hover:none){.ib button{width:44px;height:44px}.theme{width:44px;height:44px}.lh button{min-height:44px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <div class="shell">
@@ -97,15 +119,18 @@ const TOOLS={
  'compress-pdf':{n:'Compress PDF',i:'c',noun:'Drop a PDF to shrink',d:'Make a PDF smaller. Small mode redraws each page as an image, so text can no longer be selected. Lossless keeps text and vectors.',acc:'.pdf',multi:0,run:'Compress',opts:[{k:'mode',l:'Method',t:'select',o:[['raster','Small (as images)'],['lossless','Lossless (keeps text)']]},{k:'dpi',l:'Detail (DPI)',t:'range',min:36,max:300,v:150},{k:'quality',l:'Image quality',t:'range',min:1,max:95,v:70}]},
  'split-pdf':{n:'Extract pages',i:'x',noun:'Drop a PDF',d:'Keep only the pages you name, in the order you list them.',acc:'.pdf',multi:0,run:'Extract pages',opts:[{k:'pages',l:'Pages to keep',t:'text',ph:'for example 1-3, 5, 8-10'}]}};
 const G=[['Merge',['merge-pdf','merge-html']],['Convert',['html-to-pdf','pdf-to-word','word-to-pdf']],['Optimize',['compress-pdf','split-pdf']]];
+const TOUCH=matchMedia('(hover:none)').matches;
 let cur,files=[],url,dragI=null;const $=id=>document.getElementById(id);
 const fmt=b=>b>1e6?(b/1e6).toFixed(2)+' MB':(b/1e3).toFixed(1)+' KB';
 const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 $('nav').innerHTML=G.map(([g,ks])=>`<div class="grp">${g}</div>`+ks.map(k=>`<button data-k="${k}">${ico(TOOLS[k].i)}<span>${TOOLS[k].n}</span></button>`).join('')).join('');
 $('nav').onclick=e=>{const b=e.target.closest('button');b&&select(b.dataset.k)};
-$('theme').onclick=()=>{const d=document.documentElement,n=d.dataset.theme=='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('theme',n)}catch(e){}};
+const tc=()=>document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--desk').trim();
+$('theme').onclick=()=>{const d=document.documentElement,n=d.dataset.theme=='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('theme',n)}catch(e){}tc()};
 function select(k){cur=k;files=[];const t=TOOLS[k];
  [...$('nav').querySelectorAll('button')].forEach(b=>b.setAttribute('aria-current',b.dataset.k==k));
- $('ttl').textContent=t.n;$('desc').textContent=t.d;$('dl').textContent=t.noun;$('hint').innerHTML=(t.multi?'Drag files onto this sheet':'Drag a file onto this sheet')+' or <u>choose from your computer</u>';$('acc').textContent='Accepts '+t.acc.split(',').join('  ');
+ $('ttl').textContent=t.n;$('desc').textContent=t.d;$('dl').textContent=TOUCH?t.noun.replace(/^Drop/,'Choose'):t.noun;$('hint').innerHTML=TOUCH?'Tap to <u>choose '+(t.multi?'files':'a file')+'</u>':(t.multi?'Drag files onto this sheet':'Drag a file onto this sheet')+' or <u>choose from your computer</u>';
+ [...$('nav').querySelectorAll('button')].find(b=>b.dataset.k==k).scrollIntoView({inline:'center',block:'nearest'});$('acc').textContent='Accepts '+t.acc.split(',').join('  ');
  $('pick').accept=t.acc;$('pick').multiple=!!t.multi;$('run').textContent=t.run;
  $('opts').hidden=!t.opts.length;
  $('opts').innerHTML=t.opts.map(o=>{const c=o.t=='select'?`<select data-k="${o.k}">${o.o.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select>`:o.t=='range'?`<div class="rg"><input type="range" data-k="${o.k}" min="${o.min}" max="${o.max}" value="${o.v}"><output>${o.v}</output></div>`:`<input type="text" data-k="${o.k}" placeholder="${o.ph||''}">`;return `<label><span>${o.l}</span>${c}</label>`}).join('');
@@ -142,7 +167,7 @@ $('run').onclick=async()=>{const t=TOOLS[cur],fd=new FormData(),out=$('out');
   const note=o?(n<o?`<span class="save">${Math.round(100-n/o*100)}% smaller</span>, was ${fmt(o)}`:`Not smaller than the original (${fmt(o)}). Try the other method.`):'Ready to download';
   out.innerHTML=`<div class="t"><b>${esc(name)}</b><small>${fmt(n)}. ${note}</small></div><a class="btn" href="${url}" download="${esc(name)}">${ico('p',16)}Download</a>`;out.className='proof show';
  }catch(e){out.innerHTML='';const b=document.createElement('div');b.className='t';b.innerHTML='<b>Could not finish</b><small></small>';b.querySelector('small').textContent=e.message;out.append(b);out.className='proof er show'}
- $('bar').classList.remove('on');$('run').textContent=t.run;$('run').disabled=!files.length};
+ out.scrollIntoView({behavior:'smooth',block:matchMedia('(max-width:820px)').matches?'center':'nearest'});$('bar').classList.remove('on');$('run').textContent=t.run;$('run').disabled=!files.length};
 async function disk(){try{const j=await(await fetch('/api/disk-usage')).json();$('disk').textContent='Workspace in use: '+fmt(j.bytes)}catch(e){}}
-disk();setInterval(disk,2000);select('merge-pdf');
+disk();setInterval(disk,2000);select('merge-pdf');tc();
 </script></body></html>

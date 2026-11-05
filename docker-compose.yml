@@ -1,0 +1,70 @@
+# Sized for a 2 vCPU / 4 GB server. Scale the numbers together (see DEPLOY.md, "Tuning").
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    init: true                                  # reaps the child processes LibreOffice and Chromium leave behind
+    user: "10001:10001"
+    environment:
+      PUBLIC_MODE: "1"
+      ALLOWED_HOSTS: ${DOMAIN}
+      APP_USER: ${APP_USER:-}
+      APP_PASSWORD: ${APP_PASSWORD:-}           # or use APP_PASSWORD_HASH_FILE with a Docker secret (see DEPLOY.md)
+      PROXY_HOPS: "1"                           # Caddy is the one trusted proxy
+      RATELIMIT_STORAGE_URI: redis://redis:6379/0
+      RATE_HEAVY: 10/minute;100/hour            # per visitor IP, conversion endpoints
+      PER_IP_JOBS: "2"                          # heavy jobs one visitor may run at once
+      MAX_UPLOAD_MB: "50"
+      MAX_PAGES: "500"
+      ZIP_MAX_MB: "100"                         # most a ZIP or .docx may unpack to
+      MAX_HTML_MB: "40"
+      MAX_RASTER_MP: "40"                       # megapixels per page when Compress redraws pages
+      WEB_CONCURRENCY: "2"                      # worker processes
+      SLOTS: "1"                                # heavy jobs per worker -> 2 at once overall
+      CHROMIUM_ARGS: --no-sandbox,--disable-dev-shm-usage
+    read_only: true
+    tmpfs:
+      - /app/workspace:size=1g,mode=0700,uid=10001,noexec,nosuid,nodev
+      - /tmp:size=128m,uid=10001,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ulimits:
+      core: 0                                   # no core dumps (they would contain document contents)
+      nofile: 4096
+    mem_limit: 3g
+    cpus: 2
+    pids_limit: 512
+    networks: [backend]                         # internal network: the app has NO route to the internet
+    depends_on: [redis]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [backend]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    networks: [backend, public]
+    depends_on: [app]
+
+networks:
+  backend:
+    internal: true        # no outbound access: a converter bug can't call out to the internet or cloud metadata
+  public: {}
+
+volumes:
+  caddy_data:

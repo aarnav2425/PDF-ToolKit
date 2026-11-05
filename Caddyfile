@@ -1,0 +1,27 @@
+# Caddy gets and renews the HTTPS certificate for $DOMAIN automatically.
+{
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 5m
+			idle 2m
+		}
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+	}
+	request_body {
+		max_size 60MB
+	}
+	reverse_proxy app:8000 {
+		request_buffers 64MB   # a slow uploader ties up Caddy, not one of the app's few worker threads
+		transport http {
+			response_header_timeout 330s
+		}
+	}
+}

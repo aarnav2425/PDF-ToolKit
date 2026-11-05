@@ -1,4 +1,4 @@
-import subprocess, io, re, os, zipfile, tempfile, shutil, threading, http.server, functools, logging, hmac, signal, sys, time, json, base64, math, contextlib, hashlib, secrets
+import subprocess, io, re, os, zipfile, tempfile, shutil, threading, http.server, functools, logging, hmac, signal, sys, time, json, base64, math, contextlib, hashlib, secrets, pathlib
 from urllib.parse import urlparse, quote
 from flask import Flask, request, send_file, jsonify, render_template, abort, Response, send_from_directory, g, copy_current_request_context
 import pymupdf as fitz  # PyMuPDF
@@ -120,6 +120,7 @@ ZIP_MAX_MB = _env_int("ZIP_MAX_MB", 200)                 # most a ZIP / .docx ma
 MAX_HTML_MB = _env_int("MAX_HTML_MB", 60)                # most HTML text Merge HTML will hold in memory
 MAX_RASTER_MP = _env_int("MAX_RASTER_MP", 120)           # megapixels per page when Compress redraws pages as images
 RECYCLE_ON_HANG = os.environ.get("RECYCLE_ON_HANG") == "1"
+DEBUG_ERRORS = os.environ.get("DEBUG_ERRORS") == "1"     # log the converter's error text (may quote document text: use only while fixing a problem)
 PDF = "application/pdf"
 APP_PASSWORD = _secret("APP_PASSWORD")  # set it to require a login (use when sharing)
 APP_PASSWORD_HASH = _secret("APP_PASSWORD_HASH")  # better: a werkzeug hash, so no plain password sits on the server
@@ -351,26 +352,35 @@ def clean_env():  # don't hand secrets (e.g. APP_PASSWORD) to converter programs
 
 
 def run_isolated(cmd, timeout, env=None):
-    """Run cmd in its own process group and return (exit code, ""). (Output is intentionally discarded.) On timeout the whole group is
-    killed: LibreOffice starts child processes that would otherwise keep running."""
-    # Output is discarded (never buffered in memory, never logged: it can contain document text).
-    p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, start_new_session=True)
-    if resource is not None and hasattr(resource, "prlimit"):  # Linux: cap CPU time and the size of any file written
-        try:
-            resource.prlimit(p.pid, resource.RLIMIT_CPU, (timeout + 30, timeout + 30))
-            resource.prlimit(p.pid, resource.RLIMIT_FSIZE, (1 << 30, 1 << 30))
-        except (OSError, ValueError):
-            pass
+    """Run cmd in its own process group and return (exit code, error text). The error text is empty unless
+    DEBUG_ERRORS=1: converter output can quote document text, so by default it is discarded, never logged.
+    On timeout the whole group is killed: LibreOffice starts child processes that would otherwise keep running."""
+    errf = tempfile.TemporaryFile(dir=WORKSPACE) if DEBUG_ERRORS else None
     try:
-        p.communicate(timeout=timeout)
-    except BaseException:
+        p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=errf or subprocess.DEVNULL, env=env, start_new_session=True)
+        if resource is not None and hasattr(resource, "prlimit"):  # Linux: cap CPU time and the size of any file written
+            try:
+                resource.prlimit(p.pid, resource.RLIMIT_CPU, (timeout + 30, timeout + 30))
+                resource.prlimit(p.pid, resource.RLIMIT_FSIZE, (1 << 30, 1 << 30))
+            except (OSError, ValueError):
+                pass
         try:
-            os.killpg(p.pid, signal.SIGKILL) if hasattr(os, "killpg") else p.kill()
-        except (ProcessLookupError, PermissionError):
-            pass
-        p.wait()
-        raise
-    return p.returncode, ""
+            p.communicate(timeout=timeout)
+        except BaseException:
+            try:
+                os.killpg(p.pid, signal.SIGKILL) if hasattr(os, "killpg") else p.kill()
+            except (ProcessLookupError, PermissionError):
+                pass
+            p.wait()
+            raise
+        tail = ""
+        if errf:
+            errf.seek(0)
+            tail = errf.read()[-1500:].decode("utf-8", "ignore")
+        return p.returncode, tail
+    finally:
+        if errf:
+            errf.close()
 
 
 _CHARREF = re.compile(rb"&#(x[0-9a-fA-F]+|[0-9]+);")
@@ -869,12 +879,15 @@ def _office_convert(office, ext, data):
         src = os.path.join(tmp, "input" + ext)
         with open(src, "wb") as fh:
             fh.write(data)
-        rc, _ = run_isolated([office, "--headless", "--norestore", "--nolockcheck",
-                              f"-env:UserInstallation=file://{os.path.join(tmp, 'profile')}",
+        rc, tail = run_isolated([office, "--headless", "--norestore", "--nolockcheck",
+                              # as_uri() percent-encodes the path: a space or accent in the project folder broke LibreOffice
+                              f"-env:UserInstallation={pathlib.Path(tmp, 'profile').resolve().as_uri()}",
                               "--convert-to", "pdf", "--outdir", tmp, src],
                              120, {**clean_env(), "HOME": tmp})
         out = os.path.join(tmp, "input.pdf")
         if rc != 0 or not os.path.exists(out):
+            log.error("word-to-pdf: LibreOffice exit code %s, PDF %s%s", rc, "created" if os.path.exists(out) else "missing",
+                      f" | {tail}" if DEBUG_ERRORS and tail else "")
             raise Failed("Could not convert this document.")
         with open(out, "rb") as fh:
             return fh.read()
